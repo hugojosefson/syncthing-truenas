@@ -107,7 +107,7 @@ download_syncthing_binary() {
   download_dir="$(dirname "${SYNCTHING_BINARY_PATH}")"
 
   mkdir -p "${download_dir}"
-  curl -sfLS "${url}" | tar xz -C "${download_dir}" --strip-components=1 --wildcards '*/syncthing'
+  curl -fLS "${url}" | tar xz -C "${download_dir}" --strip-components=1 --wildcards '*/syncthing'
 }
 
 # checks if the syncthing binary is downloaded, is executable, and the latest

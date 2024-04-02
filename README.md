@@ -20,7 +20,7 @@ Go to the directory where you have write access, and download the repo:
 ```bash
 mkdir -p syncthing-truenas
 
-curl -sfLS https://github.com/hugojosefson/syncthing-truenas/archive/refs/heads/main.tar.gz \
+curl -fLS https://github.com/hugojosefson/syncthing-truenas/archive/refs/heads/main.tar.gz \
 | tar xvz --strip-components=1 -C syncthing-truenas
 ```
 
