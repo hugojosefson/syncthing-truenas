@@ -119,7 +119,7 @@ is_syncthing_binary_latest() {
 
 # main entry point
 main() {
-  # if download/syncthing is not an executable, download it there
+  # download if needed
   if ! is_syncthing_binary_latest; then
     download_syncthing_binary
   fi
