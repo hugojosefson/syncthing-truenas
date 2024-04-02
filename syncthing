@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+################################################################################
+# Downloads and runs the latest syncthing binary.
+#
+# This script downloads the latest syncthing binary from the official Syncthing
+# releases on GitHub, and runs it. If the binary is already downloaded, and is
+# the correct version, it will not be downloaded again.
+#
+# The script will pass any arguments to the syncthing binary.
+#
+# This script © 2024 by Hugo Josefson, and is licensed under the MIT license.
+# https://github.com/hugojosefson/syncthing-truenas
+################################################################################
+
+cd "$(dirname "$0")"
+SYNCTHING_BINARY_PATH="download/syncthing"
+
+remove_leading_v() {
+  sed 's/^v//'
+}
+
+# gets the latest version of syncthing from the official GitHub releases
+get_syncthing_version_latest() {
+  curl -sfLS "https://semver-version.deno.dev/api/github/syncthing/syncthing" |
+    remove_leading_v
+}
+
+# gets the version of any syncthing binary in the download directory
+get_syncthing_version_local() {
+  "${SYNCTHING_BINARY_PATH}" --version |
+    cut -d' ' -f2 |
+    remove_leading_v \
+      2>/dev/null || :
+}
+
+# builds a github release URL from the given repository, version, and os etc.
+# example URL: https://github.com/syncthing/syncthing/releases/download/v1.27.5/syncthing-linux-amd64-v1.27.5.tar.gz
+combine_github_release_url() {
+  local repo filename_base version os arch filename_ext
+  repo="${1}"
+  # remove any leading "v" from the version
+  version="${2#v}"
+  os="${3}"
+  arch="${4}"
+  filename_base="${5:-$(basename "${repo}")}"
+  filename_ext="${6:-tar.gz}"
+  echo "https://github.com/${repo}/releases/download/v${version}/${filename_base}-${os}-${arch}-v${version}.${filename_ext}"
+}
+
+# calculates the download URL for the latest syncthing binary.
+get_syncthing_binary_url() {
+  local os arch version
+
+  # support os:es which have releases
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  case "${os}" in
+  freebsd)
+    os="freebsd"
+    ;;
+  linux)
+    os="linux"
+    ;;
+  sunos)
+    os="illumos"
+    ;;
+  *)
+    echo "Unsupported OS: ${os}" >&2
+    exit 1
+    ;;
+  esac
+
+  # support arch:es which have releases: amd64, 386, arm, arm64
+  arch="$(uname -m)"
+  case "${arch}" in
+  x86_64)
+    arch="amd64"
+    ;;
+  i386)
+    arch="386"
+    ;;
+  armv6l)
+    arch="arm"
+    ;;
+  aarch64)
+    arch="arm64"
+    ;;
+  *)
+    echo "Unsupported arch: ${arch}" >&2
+    exit 1
+    ;;
+  esac
+
+  version="$(get_syncthing_version_latest)"
+  combine_github_release_url "syncthing/syncthing" "${version}" "${os}" "${arch}"
+}
+
+# download the syncthing binary and extracts it to the download directory. not
+# the whole release archive, but strip 1 path level, and extract just the
+# "syncthing" binary.
+download_syncthing_binary() {
+  local url download_dir
+
+  url="$(get_syncthing_binary_url)"
+  download_dir="$(dirname "${SYNCTHING_BINARY_PATH}")"
+
+  mkdir -p "${download_dir}"
+  curl -sfLS "${url}" | tar xz -C "${download_dir}" --strip-components=1 --wildcards '*/syncthing'
+}
+
+# checks if the syncthing binary is downloaded, is executable, and the latest
+# version
+is_syncthing_binary_latest() {
+  [[ -x "${SYNCTHING_BINARY_PATH}" ]] &&
+    [[ "$(get_syncthing_version_local)" == "$(get_syncthing_version_latest)" ]]
+}
+
+# main entry point
+main() {
+  # if download/syncthing is not an executable, download it there
+  if ! is_syncthing_binary_latest; then
+    download_syncthing_binary
+  fi
+
+  # hand over to the syncthing binary
+  exec "${SYNCTHING_BINARY_PATH}" "$@"
+}
+
+main "$@"
