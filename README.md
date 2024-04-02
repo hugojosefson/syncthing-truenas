@@ -24,6 +24,12 @@ curl -sfLS https://github.com/hugojosefson/syncthing-truenas/archive/refs/heads/
 | tar xvz --strip-components=1 -C syncthing-truenas
 ```
 
+...or, if you have `git` installed:
+
+```bash
+git clone https://github.com/hugojosefson/syncthing-truenas
+```
+
 ## Usage
 
 Then, go into the directory, and run the script to download and run syncthing as
